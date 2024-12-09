@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Transactions</title>
+    <!-- Include Bootstrap 4.5 for better styling and responsiveness -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Include Flatpickr CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" rel="stylesheet">
+    <!-- Include Font Awesome for the calendar icon -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css" rel="stylesheet">
+    <style>
+        #customerList {
+            margin-top: 20px;
+        }
+        .customer {
+            padding: 15px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        .form-group label {
+            font-weight: bold;
+        }
+
+        /* Styling for the input[type="date"] */
+        input[type="date"] {
+            padding: 10px;
+            font-size: 16px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            width: 100%;
+            box-sizing: border-box;
+            position: relative;
+            padding-right: 35px; /* Space for the calendar icon */
+            background-color: #fff;
+        }
+
+        /* Add the calendar icon as background */
+        input[type="date"]::after {
+            content: '\f133'; /* Font Awesome calendar icon */
+            font-family: 'Font Awesome 5 Free';
+            font-weight: 900;
+            color: black;
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            pointer-events: none; /* Ensures that the icon does not block interaction with the input */
+        }
+
+        /* Custom placeholder styling */
+        input[type="date"].has-placeholder::before {
+            content: attr(placeholder);
+            position: absolute;
+            top: 10px;
+            left: 15px;
+            font-size: 16px;
+            color: #aaa;
+            pointer-events: none; /* Allow interaction with the input */
+        }
+
+        /* Mobile-specific styling */
+        @media (max-width: 768px) {
+            .col-md-4 {
+                margin-bottom: 15px;
+            }
+        }
+
+        /* Adjust for very small screens */
+        @media (max-width: 576px) {
+            input[type="date"] {
+                font-size: 14px; /* Smaller font for smaller screens */
+                padding: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <h2 class="text-center">Customer Transactions</h2>
+        <div class="row">
+            <div class="col-12 d-block d-sm-none">
+                <div class="form-group">
+                    <label for="fromDate">From Date:</label>
+                    <input type="date" id="fromDate" class="form-control has-placeholder" placeholder="dd-mm-yyyy" />
+                </div>
+            </div>
+            
+            <div class="col-lg-4 d-none d-lg-block">
+                <div class="form-group date-input-container">
+                    <label for="tillDate">Till Date:</label>
+                    <input type="date" />
+                </div>
+            </div>
+            <div class="col-12 d-block d-sm-none">
+                <div class="form-group">
+                    <label for="tillDate">Till Date:</label>
+                    <input type="date" id="tillDate" class="form-control has-placeholder" placeholder="dd-mm-yyyy" />
+                </div>
+            </div>
+            <div class="col-lg-4 d-none d-lg-block">
+                <div class="form-group date-input-container">
+                    <label for="tillDate">Till Date:</label>
+                    <input type="date" />
+                </div>
+            </div>
+            <div class="col-md-4 col-sm-12">
+                <div class="form-group">
+                    <label for="customerName">Customer Name:</label>
+                    <select class="form-control" id="customerName">
+                        <option value="">Select Customer</option>
+                        <!-- Dynamically populated customer names will go here -->
+                    </select>
+                </div>
+            </div>
+        </div>
+        <div class="text-center">
+            <button class="btn btn-primary" onclick="filterTransactions()">Filter</button>
+        </div>
+
+        <div id="customerList" class="mt-4">
+            <!-- Dynamically populated transaction details will go here -->
+        </div>
+
+        <div class="text-center mt-4">
+            <button class="btn btn-success" onclick="downloadCSV()">Download Report</button>
+        </div>
+    </div>
+
+    <!-- Include jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Include Flatpickr JS -->
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <!-- Include Bootstrap JS and dependencies -->
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.1/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+    <script>
+        // Initialize Flatpickr for both date inputs (with custom style)
+        $(document).ready(function () {
+            // Apply Flatpickr to "From Date" and "Till Date"
+            flatpickr("#fromDate", {
+                dateFormat: "Y-m-d", // Format for the backend
+                altInput: true,      // Show an alternate input for better UI
+                altFormat: "F j, Y", // Format for the user
+                placeholder: "Select From Date" // Placeholder to indicate what the user should do
+            });
+
+            flatpickr("#tillDate", {
+                dateFormat: "Y-m-d",
+                altInput: true,
+                altFormat: "F j, Y",
+                placeholder: "Select Till Date"
+            });
+
+            // Add the custom placeholder behavior after page load
+            addPlaceholderBehavior();
+
+            // Load customer names and transactions
+            loadCustomerNames();
+            loadAllTransactions();
+        });
+
+        // Function to add placeholder behavior for mobile screens
+        function addPlaceholderBehavior() {
+            const dateInputs = document.querySelectorAll('input[type="date"]');
+            dateInputs.forEach(input => {
+                // Check if the input is empty
+                if (!input.value) {
+                    input.classList.add('has-placeholder');
+                }
+
+                // Detect change to remove placeholder when date is selected
+                input.addEventListener('change', function() {
+                    if (input.value) {
+                        input.classList.remove('has-placeholder');
+                    } else {
+                        input.classList.add('has-placeholder');
+                    }
+                });
+            });
+        }
+
+        // Example AJAX calls for loading and filtering
+        function loadCustomerNames() {
+            // Replace this with your API call logic
+        }
+
+        function loadAllTransactions() {
+            // Replace this with your API call logic
+        }
+
+        function filterTransactions() {
+            const fromDate = $('#fromDate').val();
+            const tillDate = $('#tillDate').val();
+            const customerName = $('#customerName').val();
+            console.log(`Filter Params: From: ${fromDate}, Till: ${tillDate}, Customer: ${customerName}`);
+            // Replace this with your API call logic for filtering
+        }
+    </script>
+</body>
+</html>
